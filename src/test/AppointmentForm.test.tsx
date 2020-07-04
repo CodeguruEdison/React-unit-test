@@ -1,8 +1,17 @@
 import React from 'react';
 import {createContainer,field,findOptions,labelFor} from './domManipulators';
 import AppointmentForm from '../AppointmentForm';
+import { start } from 'repl';
 describe("AppointmentForm",()=>{
     let render:any, container:HTMLDivElement,form:any
+
+    const timeSlotTable = () => container.querySelector('table#time-slot');
+    const startsAtField = (index:number) =>{
+        //return container.querySelectorAll(`input[name="startsAt"]`)[index] as HTMLInputElement
+        return container.querySelectorAll(`input[name="startsAt"]`)[
+            index
+          ] as HTMLInputElement;
+    }
     const itRendersAsSelectBox =(comp:any,formName:string,elementName:string)=>{
         it('renders as a select box',()=>{
             render(comp);
@@ -79,5 +88,78 @@ describe("AppointmentForm",()=>{
         itRenderAsLabel(<AppointmentForm/>,'service','Service');
         itAssignsAnIdThatMatchesTheLabelId(<AppointmentForm/>,'service');
     })
+
+    describe('time slot table',()=>{
+        it('renders a table for time slot',()=>{
+            render(<AppointmentForm/>)
+            expect(container.querySelector('table#time-slot')).not.toBeNull();
+        });
+    })
+
+    it('renders a time slot for every half hour between open and close time',()=>{
+        render(<AppointmentForm salonOpenAt={9} salonCloseAt={19} />)
+        const timesOfDay = timeSlotTable()?.querySelectorAll(
+            'tbody >* th'
+          );
+       // console.log(timesOfDay);
+        expect(timesOfDay).toHaveLength(20);
+        const arrayList = Array.from(timesOfDay!);
+        expect(arrayList[0].textContent).toEqual('09:00');
+        expect(arrayList[1].textContent).toEqual('09:30');
+        expect(arrayList[3].textContent).toEqual('10:30');
+
+      
+    })
+    it('renders an empty cell at the start of the header row',()=>{
+        render(<AppointmentForm/>)
+        const headerRow = timeSlotTable()?.querySelector('thead > tr');
+        expect(headerRow?.firstChild?.textContent).toEqual('');
+    })
+    it('renders a week of available  date',()=>{
+        const today = new Date(2018, 11, 1);
+        render(<AppointmentForm today = {today} />)
+        const dates = timeSlotTable()?.querySelectorAll('thead >* th:not(:first-child)');
+         expect(dates).toHaveLength(7);
+
+
+
+
+    })
+    it('renders a radio button  for each time slot',()=>{
+        const today = new Date();
+        const availableTimeSlots =[
+            {startsAt:today.setHours(9,0,0,0)},
+            {startsAt:today.setHours(9,30,0,0)}
+        ];
+        render(<AppointmentForm availableTimeSlots={availableTimeSlots} today={today}/>)
+        const cells = timeSlotTable()!.querySelectorAll('td');
+        const firstCell = cells[0] as HTMLTableDataCellElement;
+        expect(firstCell.querySelector('input[type="radio"]')).not.toBeNull();
+        expect(cells[7].querySelectorAll('input[type="radio"]')).not.toBeNull();
+    })
+
+    it('does not render radio button for unavilable time slots',()=>{
+        render(<AppointmentForm availableTimeSlots={[]}/>);
+        const timesofDay = timeSlotTable()?.querySelectorAll('input');
+        expect(timesofDay).toHaveLength(0);
+    })
+    it('sets radio button values to the index of the corresponding appointment', () => {
+        const today = new Date();
+        const availableTimeSlots = [
+          { startsAt: today.setHours(9, 0, 0, 0) },
+          { startsAt: today.setHours(9, 30, 0, 0) }
+        ];
+        render(
+          <AppointmentForm
+            availableTimeSlots={availableTimeSlots}
+            today={today}
+          />);
+        expect(startsAtField(0).value).toEqual(
+          availableTimeSlots[0].startsAt.toString()
+        );
+        expect(startsAtField(1).value).toEqual(
+          availableTimeSlots[1].startsAt.toString()
+        );
+      });
 
 })
